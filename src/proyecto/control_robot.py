@@ -403,3 +403,15 @@ if __name__ == '__main__':
     control.move_motors(angles)
 
     control.dibuja_numero(4)
+    control.dibuja_numero(5)
+    control.dibuja_numero(9)
+    pose = control.get_pose()
+    mover = []
+    pose.position.z -= 0.5
+    mover.append(pose)
+    print("Has pintado los numeros")
+    control.add_floor()
+    control.move_trajectory(mover)
+    control.dibuja_numero(4)
+    control.dibuja_numero(5)
+    control.dibuja_numero(8)
