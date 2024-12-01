@@ -81,7 +81,7 @@ class ControlRobot:
 
     # Cargar configuración desde YAML
     def load_motor_angles_from_yaml(self, name: str) -> list:
-        with open("src/proyecto/motor_angles.yaml", 'r') as f:
+        with open("src/proyecto/src/proyecto/motor_angles.yaml", 'r') as f:
             data = yaml.load(f, Loader=yaml.Loader)
             return data.get(name, [])
 
@@ -405,11 +405,14 @@ if __name__ == '__main__':
     control.dibuja_numero(9)
     pose = control.get_pose()
     mover = []
-    pose.position.z -= 0.5
+    pose_c = control.get_pose()
+    pose_c.position.y += 1
+    pose_c.position.z += 1
+    pose_2 = control.get_pose()
+    pose_2.position.y += 1
+    pose_2.position.z += 1
     mover.append(pose)
-    print("Has pintado los numeros")
+    mover.append(pose_c)
+    mover.append(pose_2)
     control.add_floor()
     control.move_trajectory(mover)
-    control.dibuja_numero(4)
-    control.dibuja_numero(5)
-    control.dibuja_numero(8)
