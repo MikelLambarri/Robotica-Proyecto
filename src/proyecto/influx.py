@@ -12,7 +12,6 @@ class SignalCaptureNode:
     def __init__(self):
         rospy.init_node('signal_capture_node')
 
-        # Configuración de la base de datos
         self.db_client = InfluxDBClient(
             url="https://deusto-influxdb-001-v2qrmk5znqme3f.eu-west-1.timestream-influxdb.amazonaws.com:8086/",
             token="fTwdAa81OtrQATLX7eWfSGHD62XgmOrfZ5REm5F8UDmPouj1SvsQKdOZgUJiku5HP4tFM_Amzl83gBnRDLKg4Q==",
@@ -21,15 +20,14 @@ class SignalCaptureNode:
         self.write_api = self.db_client.write_api(write_options=SYNCHRONOUS)
         self.bucket = "Grupo_1"
 
-        # Variables
         self.is_capturing = False
         self.start_time = None
         self.traceability_code = None
         self.data = []
-
-        # Suscripciones
+        
         rospy.Subscriber('/joint_states', JointState, self.joint_state_callback)
         rospy.Subscriber('/capture_control', Int32, self.capture_control_callback)
+        self.delete_data()
 
         rospy.spin()
 
@@ -47,7 +45,6 @@ class SignalCaptureNode:
                 self.is_capturing = False
                 rospy.loginfo("Captura finalizada. Registrando datos en la base de datos...")
                 self.register_data()
-                #self.delete_data()
                 self.data = []
             else:
                 rospy.logwarn("Intento de detener captura, pero no estaba activa.")
@@ -55,20 +52,14 @@ class SignalCaptureNode:
     def joint_state_callback(self, msg):
         """Callback para capturar datos del topic /joint_states."""
         if self.is_capturing:
-            # timestamp = time.time() - self.start_time
-            # velocity = list(msg.velocity)
-            # position = list(msg.position)
-            # effort = list(msg.effort)
             velocity = [v if v is not None else 0 for v in list(msg.velocity)] if msg.velocity else []
             position = [p if p is not None else 0 for p in list(msg.position)] if msg.position else []
             effort = [e if e is not None else 0 for e in list(msg.effort)] if msg.effort else []
 
-            # Asegurar que todas las listas tengan la misma longitud
             max_length = max(len(velocity), len(position), len(effort))
             velocity += [0] * (max_length - len(velocity))
             position += [0] * (max_length - len(position))
             effort += [0] * (max_length - len(effort))
-
 
             rospy.loginfo(f"Velocidad: {velocity}, Esfuerzo: {effort}, Posición: {position}")
 
@@ -79,18 +70,18 @@ class SignalCaptureNode:
                 "effort": effort
             })
 
+
     def generate_custom_id(self, line, area):
         """
         Genera un ID en el formato LLLAAYYJJJHHMMSSmmmuu (milisegundos y microsegundos incluidos).
         """
         now = datetime.now()
-        year = now.year % 100  # Últimos dos dígitos del año
-        day_of_year = now.timetuple().tm_yday  # Día juliano
-        hour_min_sec = now.strftime("%H%M%S")  # Hora, minuto, segundo
-        milliseconds = int(now.microsecond / 1000)  # Convertir microsegundos a milisegundos
-        microseconds = now.microsecond % 1000  # Microsegundos restantes
+        year = now.year % 100  
+        day_of_year = now.timetuple().tm_yday  
+        hour_min_sec = now.strftime("%H%M%S") 
+        milliseconds = int(now.microsecond / 1000)  
+        microseconds = now.microsecond % 1000 
 
-        # Construir el ID
         custom_id = f"{line}{area}{year:02d}{day_of_year:03d}{hour_min_sec}{milliseconds:03d}{microseconds:03d}"
         return custom_id
     
@@ -99,50 +90,50 @@ class SignalCaptureNode:
         try:
             from datetime import datetime
 
-            # Obtener el tiempo actual en formato RFC3339Nano
-            now = datetime.utcnow().isoformat() + "Z"  # Agregar 'Z' para indicar UTC
+            now = datetime.utcnow().isoformat() + "Z"  
 
-            # Eliminar datos desde el inicio del tiempo hasta ahora
             self.db_client.delete_api().delete(
-                start="1970-01-01T00:00:00Z",  # Inicio del tiempo
-                stop=now,                      # Tiempo actual en formato RFC3339Nano
+                start="1970-01-01T00:00:00Z", 
+                stop=now,                      
                 bucket=self.bucket,
-                org="deusto",                 # Organización
-                predicate=""                  # Eliminar todo
+                org="deusto",               
+                predicate=""                 
             )
             rospy.loginfo("Datos eliminados del bucket antes de registrar nuevos datos.")
         except Exception as e:
             rospy.logerr(f"Error al eliminar datos del bucket: {e.args}")
 
-
     def register_data(self):
         """Registrar los datos capturados en InfluxDB con unidades específicas según el tipo de dato."""
         try:
-            #self.delete_data()  # Borrar datos existentes antes de registrar nuevos
+            points = []
             for entry in self.data:
-                # Crear puntos separados por tipo de dato (Velocity, Rotation, Torque)
                 for i, value in enumerate(entry['velocity']):
                     point = Point("joint_states") \
                         .tag("TraceabilityCode", entry["id"]) \
                         .tag("Unit", "rad/s") \
-                        .field(f"VelocityValues_Axis{i+1}", value if value is not None else 0)
-                    self.write_api.write(bucket=self.bucket, org="deusto", record=point)
+                        .field(f"VelocityValues_Axis{i+1}", value)
+                    points.append(point)
 
                 for i, value in enumerate(entry['position']):
                     point = Point("joint_states") \
                         .tag("TraceabilityCode", entry["id"]) \
                         .tag("Unit", "rad") \
-                        .field(f"RotationValues_Axis{i+1}", value if value is not None else 0)
-                    self.write_api.write(bucket=self.bucket, org="deusto", record=point)
+                        .field(f"RotationValues_Axis{i+1}", value)
+                    points.append(point)
 
                 for i, value in enumerate(entry['effort']):
                     point = Point("joint_states") \
                         .tag("TraceabilityCode", entry["id"]) \
                         .tag("Unit", "N·m") \
-                        .field(f"TorqueValues_Axis{i+1}", value if value is not None else 0)
-                    self.write_api.write(bucket=self.bucket, org="deusto", record=point)
-                print("pdsd")
-                rospy.loginfo("Datos registrados en InfluxDB con unidades específicas según el tipo de dato.")
+                        .field(f"TorqueValues_Axis{i+1}", value)
+                    points.append(point)
+
+            if points:
+                self.write_api.write(bucket=self.bucket, org="deusto", record=points)
+                rospy.loginfo(f"Se registraron {len(points)} puntos en InfluxDB.")
+            
+            self.data = []
         except Exception as e:
             rospy.logerr(f"Error al registrar datos en InfluxDB: {e.args}")
 
