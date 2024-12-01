@@ -4,7 +4,7 @@ import rospy
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Int32
 import time
-from influxdb_client import InfluxDBClient, Point, WritePrecision
+from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 from datetime import datetime
 
@@ -45,12 +45,14 @@ class SignalCaptureNode:
                 self.is_capturing = False
                 rospy.loginfo("Captura finalizada. Registrando datos en la base de datos...")
                 self.register_data()
+                #self.delete_data()
                 self.data = []
             else:
                 rospy.logwarn("Intento de detener captura, pero no estaba activa.")
 
     def joint_state_callback(self, msg):
         """Callback para capturar datos del topic /joint_states."""
+        rospy.sleep(0.1)
         if self.is_capturing:
             velocity = [v if v is not None else 0 for v in list(msg.velocity)] if msg.velocity else []
             position = [p if p is not None else 0 for p in list(msg.position)] if msg.position else []
