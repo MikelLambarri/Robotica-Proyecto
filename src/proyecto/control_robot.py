@@ -56,8 +56,6 @@ class ControlRobot:
         
         (plan, fraction) = self.move_group.compute_cartesian_path(poses, 0.01, True)
 
-        if fraction != 1.0:
-            return False
         
 
         mensaje_publicar = Int32() # Crear un mensaje de tipo String
@@ -83,7 +81,7 @@ class ControlRobot:
 
     # Cargar configuración desde YAML
     def load_motor_angles_from_yaml(self, name: str) -> list:
-        with open("src/proyecto/src/proyecto/motor_angles.yaml", 'r') as f:
+        with open("src/proyecto/motor_angles.yaml", 'r') as f:
             data = yaml.load(f, Loader=yaml.Loader)
             return data.get(name, [])
 
