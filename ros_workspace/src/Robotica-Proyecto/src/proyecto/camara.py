@@ -12,6 +12,8 @@ class NodoCamara:
         self.bridge = CvBridge()
         self.cv_image = None
         rospy.Subscriber('/usb_cam/image_raw', Image, self.__cb_image)
+        self.number_publisher = rospy.Publisher('/capture_control', Int32, queue_size=10)
+
 
     def __cb_image(self, image: Image):
         # Convertir el mensaje de ROS a una imagen de OpenCV
@@ -43,7 +45,7 @@ class NodoCamara:
                     
                     # Región de interés del fondo de la imagen
                     bgROI = bg[50:300, 380:600]
-
+                    
                     # Determinar la imagen binaria (background vs foreground)
                     dif = cv2.absdiff(grayROI, bgROI)
                     _, th = cv2.threshold(dif, 30, 255, cv2.THRESH_BINARY)
@@ -102,6 +104,7 @@ class NodoCamara:
 
                             fingers = len(inicio) + 1
                             cv2.putText(frame, '{}'.format(fingers), (390, 45), 1, 4, color_fingers, 2, cv2.LINE_AA)
+                            
 
                     cv2.imshow('th', th)
                 cv2.imshow('Frame', frame)
