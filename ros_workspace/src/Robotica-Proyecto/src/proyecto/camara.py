@@ -4,6 +4,7 @@ import imutils
 import rospy
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
+from std_msgs.msg import String, Int32
 from copy import deepcopy
 
 class NodoCamara:
@@ -12,7 +13,7 @@ class NodoCamara:
         self.bridge = CvBridge()
         self.cv_image = None
         rospy.Subscriber('/usb_cam/image_raw', Image, self.__cb_image)
-        self.number_publisher = rospy.Publisher('/capture_control', Int32, queue_size=10)
+        self.number_publisher = rospy.Publisher('/numero', Int32, queue_size=10)
 
 
     def __cb_image(self, image: Image):
@@ -22,13 +23,18 @@ class NodoCamara:
     def run(self):
         bg = None
         # Colores de visualización
-        color_start = (0, 255, 127)
-        color_end = (255, 153, 51)
-        color_far = (102, 178, 255)
-        color_contorno = (153, 204, 0)
-        color_ymin = (255, 102, 178)
-        color_fingers = (102, 255, 178)
-        
+        color_start = (0, 255, 127)  # Verde menta
+        color_end = (255, 153, 51)   # Naranja suave
+        color_far = (102, 178, 255)  # Azul claro
+
+        color_start_far = (0, 255, 127)   # Verde menta
+        color_far_end = (255, 153, 51)    # Naranja suave
+        color_start_end = (255, 204, 153) # Crema
+
+        color_contorno = (153, 204, 0)    # Verde lima
+        color_ymin = (255, 102, 178)      # Rosa fuerte
+        color_fingers = (102, 255, 178)   # Verde agua
+
         while not rospy.is_shutdown():
             if self.cv_image is not None:
                 # Trabajar con una copia de la imagen actual
@@ -114,6 +120,12 @@ class NodoCamara:
                     bg = cv2.cvtColor(frameAux, cv2.COLOR_BGR2GRAY)
                 if k == 27:
                     break
+                if k == ord('s'):
+                    print(f"envio {fingers}")
+                    mensaje_publicar = Int32() # Crear un mensaje de tipo String
+                    mensaje_publicar.data = fingers
+                    self.number_publisher.publish(mensaje_publicar)
+                    
             rospy.sleep(0.03)
         
         cv2.destroyAllWindows()
