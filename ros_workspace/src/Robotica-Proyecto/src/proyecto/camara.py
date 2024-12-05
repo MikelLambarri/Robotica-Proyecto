@@ -85,6 +85,9 @@ class NodoCamara:
                             inicio = []
                             fin = []
                             fingers = 0
+                            angle_detected = False  # Variable para detectar ángulo grande
+                            pulgar_detectado = False  # Variable para detectar si solo el pulgar está levantado
+
 
                             for i in range(defects.shape[0]):
                                 s, e, f, d = defects[i, 0]
@@ -104,12 +107,52 @@ class NodoCamara:
                                     inicio.append(start)
                                     fin.append(end)
 
+                                     # Si se encuentra un ángulo mayor a 70, activar bandera
+                                    if angulo > 70:
+                                        angle_detected = True
+                                    
+                                    # Revisar si el punto de inicio está en una posición característica del pulgar
+                                    if start[0] < x:  # Verificar si el punto está al lado izquierdo (asumiendo que es el pulgar)
+                                        pulgar_detectado = True
+                        
+
                                     cv2.circle(ROI, tuple(start), 5, color_start, 2)
                                     cv2.circle(ROI, tuple(end), 5, color_end, 2)
                                     cv2.circle(ROI, tuple(far), 7, color_far, -1)
 
-                            fingers = len(inicio) + 1
-                            cv2.putText(frame, '{}'.format(fingers), (390, 45), 1, 4, color_fingers, 2, cv2.LINE_AA)
+                            if len(inicio) == 0:
+                                minY = np.linalg.norm(ymin[0] - [x, y])
+                                if minY >= 110:
+                                    fingers += 1
+                                    
+                            for i in range(len(inicio)):
+                                fingers += 1
+                                if i == len(inicio) - 1:
+                                    fingers += 1
+                                
+                            # Determinación final del número en función de angle_detected y pulgar_detectado
+                            if angle_detected:
+                                # Números del 6 al 9 basados en la cantidad de dedos detectados y posición del pulgar
+                                if fingers == 1 and pulgar_detectado:
+                                    # Verificar si el dedo único está más abajo que ymin
+                                    pulgar_mas_bajo = all(start[1] > ymin[0][1] for start in inicio)
+                                    if pulgar_mas_bajo:
+                                        number = 6  # Solo el pulgar levantado
+                                    else:
+                                        number = 1  # Caso incorrecto, ajustamos a "1"
+                                elif fingers == 2:
+                                    number = 7  # Pulgar e índice levantados
+                                elif fingers == 3:
+                                    number = 8  # Pulgar, índice y medio levantados
+                                elif fingers == 4:
+                                    number = 9  # Todos los dedos levantados excepto meñique
+                            else:
+                                # Números del 0 al 5
+                                number = fingers
+
+                            
+                            cv2.putText(frame, '{}'.format(number), (390, 45), 1, 4, color_fingers, 2, cv2.LINE_AA)
+
                             
 
                     cv2.imshow('th', th)
@@ -125,7 +168,7 @@ class NodoCamara:
                     mensaje_publicar = Int32() # Crear un mensaje de tipo String
                     mensaje_publicar.data = fingers
                     self.number_publisher.publish(mensaje_publicar)
-                    
+
             rospy.sleep(0.03)
         
         cv2.destroyAllWindows()
