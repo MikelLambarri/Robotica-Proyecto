@@ -399,11 +399,10 @@ class ControlRobot:
 if __name__ == '__main__':
     control = ControlRobot()
 
-    # Guardar la configuración actual
+    pose = copy.deepcopy(control.get_pose())
 
-    # Cargar y mover a la configuración leída
+    pose.position.z += 0.05
 
-    angles = control.load_motor_angles_from_yaml("angulo_inicial")
-    control.move_motors(angles)
+    control.move_to_pose(pose)
 
     rospy.spin()
