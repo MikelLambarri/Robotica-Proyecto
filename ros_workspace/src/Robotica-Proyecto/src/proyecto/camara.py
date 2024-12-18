@@ -21,7 +21,6 @@ class NodoCamara:
 
     def run(self):
         bg = None
-        # Colores de visualización
         color_start = (0, 255, 127)  # Verde menta
         color_end = (255, 153, 51)   # Naranja suave
         color_far = (102, 178, 255)  # Azul claro
@@ -32,26 +31,21 @@ class NodoCamara:
 
         while not rospy.is_shutdown():
             if self.cv_image is not None:
-                # Trabajar con una copia de la imagen actual
                 frame = deepcopy(self.cv_image)
                 frame = imutils.resize(frame, width=640)
                 frame = cv2.flip(frame, 1)
                 frameAux = frame.copy()
                 if bg is not None:
-                    # Determinar la región de interés
                     ROI = frame[50:300, 380:600]
                     cv2.rectangle(frame, (380-2, 50-2), (600+2, 300+2), color_fingers, 1)
                     grayROI = cv2.cvtColor(ROI, cv2.COLOR_BGR2GRAY)
-                        
-                    # Región de interés del fondo de la imagen
+
                     bgROI = bg[50:300, 380:600]
-                        
-                    # Determinar la imagen binaria (background vs foreground)
+
                     dif = cv2.absdiff(grayROI, bgROI)
                     _, th = cv2.threshold(dif, 30, 255, cv2.THRESH_BINARY)
                     th = cv2.medianBlur(th, 7)
 
-                    # Encontrando los contornos de la imagen binaria
                     cnts, _ = cv2.findContours(th, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)[:1]
 
@@ -69,13 +63,11 @@ class NodoCamara:
                         cv2.circle(ROI, tuple(ymin[0]), 5, color_ymin, -1)
                         # Punto más a la izquierda del contorno (xmin)
                         xmin = cnt[cnt[:, :, 0].argmin()][0]
-                        cv2.circle(ROI, tuple(xmin), 5, (255, 255, 0), -1)  # Azul claro para visualizar xmin
+                        cv2.circle(ROI, tuple(xmin), 5, (255, 255, 0), -1)
 
-                        # Contorno encontrado a través de cv2.convexHull
                         hull1 = cv2.convexHull(cnt)
                         cv2.drawContours(ROI, [hull1], 0, color_contorno, 2)
 
-                        # Defectos convexos
                         hull2 = cv2.convexHull(cnt, returnPoints=False)
                         defects = cv2.convexityDefects(cnt, hull2)
 
@@ -83,8 +75,8 @@ class NodoCamara:
                             inicio = []
                             fin = []
                             fingers = 0
-                            angle_detected = False  # Variable para detectar ángulo grande
-                            pulgar_detectado = False  # Variable para detectar si solo el pulgar está levantado
+                            angle_detected = False  
+                            pulgar_detectado = False  
 
                             for i in range(defects.shape[0]):
                                 s, e, f, d = defects[i, 0]
@@ -104,12 +96,10 @@ class NodoCamara:
                                     inicio.append(start)
                                     fin.append(end)
 
-                                    # Si se encuentra un ángulo mayor a 70, activar bandera
                                     if angulo > 70:
                                         angle_detected = True
                                         
-                                    # Revisar si el punto de inicio está en una posición característica del pulgar
-                                    if start[0] < x:  # Verificar si el punto está al lado izquierdo (asumiendo que es el pulgar)
+                                    if start[0] < x: 
                                         pulgar_detectado = True
 
                                     cv2.circle(ROI, tuple(start), 5, color_start, 2)
@@ -121,7 +111,6 @@ class NodoCamara:
                                 if minY >= 110:
                                     fingers += 1
                             
-                            # Detectar número 6 basado en xmin si no hay defectos convexos
                             if len(inicio) == 0 and np.linalg.norm(xmin - [x, y]) >= 90 and abs(ymin[0][1] - y) <= 80:
                                 fingers = 1  # Solo el pulgar levantado
                                 number = 6
@@ -131,7 +120,6 @@ class NodoCamara:
                                     if i == len(inicio) - 1:
                                         fingers += 1
                                 
-                                # Determinación final del número en función de angle_detected y pulgar_detectado
                                 if angle_detected:
                                     if fingers == 2:
                                         number = 7  # Pulgar e índice levantados
