@@ -1,4 +1,4 @@
-# #!/usr/bin/python3
+#!/usr/bin/python3
 
 import sys
 import copy
@@ -27,6 +27,9 @@ class ControlRobot:
 
         self.group_name = "robot"
         self.move_group = MoveGroupCommander(self.group_name)
+
+        self.contador_dibujados = 0
+        self.contador_filas = 0
 
 
     def numero_callback(self, msg):
@@ -62,8 +65,6 @@ class ControlRobot:
         
         (plan, fraction) = self.move_group.compute_cartesian_path(poses, 0.01, True)
 
-        
-
         mensaje_publicar = Int32() # Crear un mensaje de tipo String
         mensaje_publicar.data = 1
         self.capture_control_pub.publish(mensaje_publicar)
@@ -72,6 +73,7 @@ class ControlRobot:
         mensaje_publicar.data = 0
         self.capture_control_pub.publish(mensaje_publicar)
         return
+    
     # Crear suelo
     def add_floor(self) -> None:
         pose_suelo = Pose()
@@ -82,12 +84,17 @@ class ControlRobot:
     # Guardar configuración en YAML
     def save_motor_angles_to_yaml(self, name: str) -> None:
         angles = self.get_motor_angles()
-        with open("motor_angles.yaml", 'w') as f:
+        with open("/home/laboratorio/ros_workspace/src/Robotica-Proyecto/src/proyecto/paint_angles.yaml", 'w') as f:
             yaml.dump({name: angles}, f)
 
     # Cargar configuración desde YAML
     def load_motor_angles_from_yaml(self, name: str) -> list:
-        with open("src/Robotica-Proyecto/src/proyecto/motor_angles.yaml", 'r') as f:
+        with open("/home/laboratorio/ros_workspace/src/Robotica-Proyecto/src/proyecto/motor_angles.yaml", 'r') as f:
+            data = yaml.load(f, Loader=yaml.Loader)
+            return data.get(name, [])
+        
+    def load_paint_angles_from_yaml(self, name: str) -> list:
+        with open("/home/laboratorio/ros_workspace/src/Robotica-Proyecto/src/proyecto/paint_angles.yaml", 'r') as f:
             data = yaml.load(f, Loader=yaml.Loader)
             return data.get(name, [])
 
@@ -128,281 +135,80 @@ class ControlRobot:
         
     def dibuja_numero(self, numero):
 
-        pose = control.get_pose()
+        trayectorias = {
+            0: [
+                (0, 0, -0.05), (0.04, 0, 0), (0, -0.03, 0), (-0.04, 0, 0), (0, 0.03, 0), (0, 0, 0.05)
+            ],
+            1: [
+                (0.04, -0.03, 0), (0, 0, -0.05), (-0.04, 0, 0), (0, 0, 0.05)
+            ],
+            2: [
+                (0.04, 0, 0), (0, 0, -0.05), (0, -0.03, 0), (-0.02, 0, 0), (0, 0.03, 0), (-0.02, 0, 0), (0, -0.03, 0), (0, 0, 0.05)
+            ],
+            3: [
+                (0, 0, -0.05), (0, -0.03, 0), (0.02, 0, 0), (0, 0.03, 0), (0, -0.03, 0), (0.02, 0, 0), (0, 0.03, 0), (0, 0, 0.05)
+            ],
+            4: [
+                (0.04, 0, 0), (0, 0, -0.05), (-0.02, 0, 0), (0, -0.03, 0), (0.02, 0, 0), (-0.04, 0, 0), (0, 0, 0.05)
+            ],
+            5: [
+                (0.04, -0.03, 0), (0, 0, -0.05), (0, 0.03, 0), (-0.02, 0, 0), (0, -0.03, 0), (-0.02, 0, 0), (0, 0.03, 0), (0, 0, 0.05)
+            ],
+            6: [
+                (0.04, -0.03, 0), (0, 0, -0.05), (0, 0.03, 0), (-0.02, 0, 0), (0, -0.03, 0), (-0.02, 0, 0), (0, 0.03, 0), (0.02, 0, 0), (0, 0, 0.05)
+            ],
+            7: [
+                (0.04, 0, 0), (0, 0, -0.05), (0, -0.03, 0), (-0.04, 0, 0), (0, 0, 0.05)
+            ],
+            8: [
+                (0.02, 0, 0), (0, 0, -0.05), (0.02, 0, 0), (0, -0.03, 0), (-0.04, 0, 0), (0, 0.03, 0), (0.02, 0, 0), (0, -0.03, 0), (0, 0, 0.05)
+            ],
+            9: [
+                (0, 0, -0.05), (0, -0.03, 0), (0.04, 0, 0), (0, 0.03, 0), (-0.02, 0, 0), (0, -0.03, 0), (0, 0, 0.05)
+            ]
+        }
+
+        if numero not in trayectorias:
+            rospy.logwarn(f"Número {numero} no soportado")
+            return
+
+    
+        pose = self.get_pose()
 
         poseFin = copy.deepcopy(pose)
         poseFin.position.y -= 0.05
 
         trajectory = []
 
-        if numero == 0:
-
-            pose.position.z += -0.05
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += 0.04
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.04
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= -0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += 0.05
-            trajectory.append(copy.deepcopy(pose))
-
-        elif numero == 1:
-        
-            pose.position.x += 0.04
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += -0.05
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.04
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += 0.05
-            trajectory.append(copy.deepcopy(pose))
-
-
-        elif numero == 2:
-            pose.position.x += 0.04
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += -0.05
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= -0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += 0.05
-            trajectory.append(copy.deepcopy(pose))
-
-        elif numero == 3:
-            pose.position.z += -0.05
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += 0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= -0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += 0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= -0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += 0.05
-            trajectory.append(copy.deepcopy(pose))
-
-        elif numero == 4:
-
-            pose.position.x += 0.04
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += -0.05
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += 0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.04
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += 0.05
-            trajectory.append(copy.deepcopy(pose))
-
-        elif numero == 4:
-
-            pose.position.x += 0.04
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += -0.05
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += 0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.04
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += 0.05
-            trajectory.append(copy.deepcopy(pose))
-
-        elif numero == 5:
-
-            pose.position.x += 0.04
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += -0.05
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= -0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= -0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += 0.05
-            trajectory.append(copy.deepcopy(pose))
-
-        elif numero == 6:
-
-            pose.position.x += 0.04
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += -0.05
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= -0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= -0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += 0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += 0.05
-            trajectory.append(copy.deepcopy(pose))
-
-        elif numero == 7:
-        
-            pose.position.x += 0.04
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += -0.05
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.04
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += 0.05
-            trajectory.append(copy.deepcopy(pose))
-
-        elif numero == 8:
-            pose.position.x += 0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += -0.05
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += 0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.04
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= -0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += 0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += 0.05
-            trajectory.append(copy.deepcopy(pose))
-
-        elif numero == 9:
-
-            pose.position.z += -0.05
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += 0.04
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= -0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.x += -0.02
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.y -= 0.03
-            trajectory.append(copy.deepcopy(pose))
-
-            pose.position.z += 0.05
+        for dx, dy, dz in trayectorias[numero]:
+            pose.position.x += dx
+            pose.position.y += dy
+            pose.position.z += dz
             trajectory.append(copy.deepcopy(pose))
 
         trajectory.append(poseFin)
+        self.move_trajectory(trajectory)
 
-        control.move_trajectory(trajectory)
+        self.contador_dibujados += 1
+
+        if self.contador_dibujados % 5 == 0:
+            angles = self.load_paint_angles_from_yaml("pintar")
+            self.move_motors(angles)
+            self.contador_filas += 1
+            pose = copy.deepcopy(self.get_pose())
+            pose.position.x -= 0.05 * self.contador_filas
+            self.move_to_pose(pose)
+
+
+
 
 if __name__ == '__main__':
     control = ControlRobot()
 
-    pose = copy.deepcopy(control.get_pose())
-
-    pose.position.z += 0.05
-
-    control.move_to_pose(pose)
-
+    angles = control.load_paint_angles_from_yaml("pintar")
+    
+    control.move_motors(angles)
+    
     rospy.spin()
+
+
