@@ -20,7 +20,8 @@ RUN apt update && apt install -y rviz \
 RUN pip install catkin_tools \
                 tensorboard \
                 ur_rtde \
-                influxdb_client
+                influxdb_client \ 
+                imutils
 
 RUN rm -rf /var/lib/apt/lists/* && \
     groupadd -g 1000 laboratorio && \
